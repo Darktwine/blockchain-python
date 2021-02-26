@@ -53,21 +53,7 @@ class Blockchain:
         return True
 
     def consensus(self):
-        network = self.nodes
-        network_chain = None
-        length = len(self.chain)
-        for node in network:
-            response = request.get(f'http://{node}/get_chain')
-            if response.status_code == 200:
-                node_length = response.json()['length']
-                node_chain = response.json()['chain']
-                if node_length > length and self.validate_chain(node_chain):
-                    length = node_length
-                    network_chain = node_chain
-            if network_chain:
-                self.chain = network_chain
-                return True
-            return False
+        pass
 
     @staticmethod
     def hash(block):
