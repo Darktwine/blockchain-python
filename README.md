@@ -6,4 +6,5 @@
 - blockchain data structure without proof of work or using public and private keys
 - able to add blocks on network 
 - able to return chains on network
-- able to make transactions 
+ 
+  
