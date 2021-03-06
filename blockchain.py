@@ -109,6 +109,7 @@ def get_chain():
     return jsonify(response), 200
 
 
+# add new nodes
 @app.route('/new_nodes', methods=['POST'])
 def new_nodes():
     values = request.get_json()
