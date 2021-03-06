@@ -9,9 +9,9 @@ from flask import Flask, jsonify, request
 class Blockchain:
     def __init__(self):
         self.chain = []
-        self.transactions = []
-        self.nodes = set()
+        self.transaction = []
         self.new_block(previous_hash='0')
+        self.nodes = set()
 
     def create_nodes(self, address):
         parsed_url = urlparse(address)
@@ -22,44 +22,46 @@ class Blockchain:
         else:
             raise ValueError('Invalid')
 
+    # creating a new block
     def new_block(self, previous_hash):
         block = {
             'index': len(self.chain) + 1,
-            'transaction': self.transactions,
+            'transaction': self.transaction,
             'previous_hash': previous_hash or self.hash(self.chain[-1])
         }
-        self.transactions = []
+        self.transaction = []
         self.chain.append(block)
         return block
 
+    # creating new transactions
     def new_transaction(self, sender_key, receiver_key, book_key):
-        self.transactions.append({
+        self.transaction.append({
             'sender_key': sender_key,
             'receiver_key': receiver_key,
             'book_key': book_key
         })
         return self.last_block['index'] + 1
 
+    # checks if chain is valid
     def validate_chain(self, chain):
         previous_block = chain[0]
         counter = 1
         while counter < len(chain):
-            curr = chain[counter]
+            current_block = chain[counter]
             previous_hash = self.hash(previous_block)
-            if curr['previous_hash'] != previous_hash:
+            if current_block['previous_hash'] != previous_hash:
                 return False
-            previous_block = curr
+            previous_block = current_block
             counter = counter + 1
         return True
 
-    def consensus(self):
-        pass
-
+    # hash the block
     @staticmethod
     def hash(block):
-        current_hash = json.dumps(block, sort_keys=True).encode()
-        return hashlib.sha256(current_hash).hexdigest()
+        block_hash = json.dumps(block, sort_keys=True).encode()
+        return hashlib.sha256(block_hash).hexdigest()
 
+    # gets last block from chain
     @property
     def last_block(self):
         return self.chain[-1]
@@ -70,14 +72,10 @@ node_identifier = str(uuid4()).replace('-', '')
 blockchain = Blockchain()
 
 
+# create block
 @app.route('/add_block', methods=['GET'])
 def add_block():
     last_block = blockchain.last_block
-    blockchain.new_transaction(
-        sender_key="andrew",
-        receiver_key=node_identifier,
-        book_key="123"
-    )
     previous_hash = blockchain.hash(last_block)
     block = blockchain.new_block(previous_hash)
     response = {
@@ -89,17 +87,19 @@ def add_block():
     return jsonify(response), 200
 
 
+# create transaction
 @app.route('/add_transaction', methods=['POST'])
 def add_transaction():
     values = request.get_json()
     required = ['sender_key', 'receiver_key', 'book_key']
-    if not all(x in values for x in required):
+    if not all(keys in values for keys in required):
         return 'Missing keys', 400
     index = blockchain.new_transaction(values['sender_key'], values['receiver_key'], values['book_key'])
     response = {'message': f' {index}'}
     return jsonify(response), 201
 
 
+# returns chain
 @app.route('/get_chain', methods=['GET'])
 def get_chain():
     response = {
