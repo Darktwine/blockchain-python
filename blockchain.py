@@ -13,6 +13,7 @@ class Blockchain:
         self.new_block(previous_hash='0')
         self.nodes = set()
 
+    # add nodes
     def create_nodes(self, address):
         parsed_url = urlparse(address)
         if parsed_url.netloc:
@@ -21,6 +22,10 @@ class Blockchain:
             self.nodes.add(parsed_url.path)
         else:
             raise ValueError('Invalid')
+
+    # consensus
+    def consensus(self):
+        pass
 
     # creating a new block
     def new_block(self, previous_hash):
@@ -95,7 +100,7 @@ def add_transaction():
     if not all(keys in values for keys in required):
         return 'Missing keys', 400
     index = blockchain.new_transaction(values['sender_key'], values['receiver_key'], values['book_key'])
-    response = {'message': f' {index}'}
+    response = {'message': f' New transaction for block {index}'}
     return jsonify(response), 201
 
 
@@ -127,19 +132,7 @@ def new_nodes():
 
 @app.route('/check_consensus', methods=['GET'])
 def check_consensus():
-    replaced = blockchain.consensus()
-    if replaced:
-        response = {
-            'message': 'success',
-            'new_chain': blockchain.chain
-        }
-    else:
-        response = {
-            'message': 'bad',
-            'chain': blockchain.chain
-        }
-
-    return jsonify(response), 200
+    pass
 
 
 if __name__ == '__main__':
