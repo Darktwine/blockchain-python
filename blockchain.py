@@ -1,3 +1,9 @@
+import Cryptodome
+import Cryptodome.Random
+from Cryptodome.Hash import SHA
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Signature import PKCS1_v1_5
+
 import hashlib
 import json
 from urllib.parse import urlparse
@@ -23,9 +29,35 @@ class Blockchain:
         else:
             raise ValueError('Invalid')
 
+    # proof of work
+    def proof(self):
+        network = self.nodes
+        for node in network:
+            response = requests.post(f'http://{node}/add_transaction', data={
+                "sender_key": self.transaction[0]['sender_key'],
+                "receiver_key": self.transaction[0]['receiver_key'],
+                "book_key": self.transaction[0]['book_key']
+            })
+            response = requests.get(f'http://{node}/add_block')
+
     # consensus
     def consensus(self):
-        pass
+        self.proof()
+        network = self.nodes
+        check_chain = None
+        length_chain = len(self.chain)
+        for node in network:
+            response = requests.get(f'http://{node}/get_chain')
+            if response.status_code == 200:
+                length = response.json()['length']
+                chain = response.json()['chain']
+                if length > length_chain and self.validate_chain(chain):
+                    length_chain = length
+                    check_chain = chain
+        if check_chain:
+            self.chain = check_chain
+            return True
+        return False
 
     # creating a new block
     def new_block(self, previous_hash):
@@ -132,7 +164,18 @@ def new_nodes():
 
 @app.route('/check_consensus', methods=['GET'])
 def check_consensus():
-    pass
+    good = blockchain.consensus()
+    if good:
+        response = {
+            'message': 'New chain',
+            'chain': blockchain.chain
+        }
+    else:
+        response = {
+            'message': 'Consensus failed',
+            'chain': blockchain.chain
+        }
+    return jsonify(response), 200
 
 
 if __name__ == '__main__':
