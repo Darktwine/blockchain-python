@@ -1,9 +1,11 @@
+import binascii
+# from cryptography.hazmat.primitives import serialization as crypto_serialization
+# from cryptography.hazmat.primitives.asymmetric import rsa
+# from cryptography.hazmat.backends import default_backend as crypto_default_backend
 import Cryptodome
 import Cryptodome.Random
-from Cryptodome.Hash import SHA
 from Cryptodome.PublicKey import RSA
-from Cryptodome.Signature import PKCS1_v1_5
-
+from Cryptodome.Cipher import Salsa20
 import hashlib
 import json
 from urllib.parse import urlparse
@@ -19,6 +21,32 @@ class Blockchain:
         self.new_block(previous_hash='0')
         self.nodes = set()
 
+        # rsa encryption (testing wrong location)
+        #self.private_key = RSA.generate(1024, random_gen)
+        #self.public_key = self.private_key.public_key()
+
+    # check if rsa encryption is working
+    """
+    def set_key(self):
+        key = rsa.generate_private_key(
+            backend=crypto_default_backend(),
+            public_exponent=65537,
+            key_size=2048
+        )
+        private_key = key.private_bytes(crypto_serialization.Encoding.PEM,
+                                        crypto_serialization.PrivateFormat.PKCS8,
+                                        crypto_serialization.NoEncryption())
+        public_key = key.public_key().public_bytes(crypto_serialization.Encoding.OpenSSH,
+                                                   crypto_serialization.PublicFormat.OpenSSH)
+        self.public_key = public_key
+        self.private_key = private_key
+        
+        print('public\n')
+        print(binascii.hexlify(self.public_key.exportKey(format='DER')).decode('ascii'))
+        print('private\n')
+        print(binascii.hexlify(self.private_key.exportKey(format='DER')).decode('ascii'))
+    """
+
     # add nodes
     def create_nodes(self, address):
         parsed_url = urlparse(address)
@@ -29,20 +57,21 @@ class Blockchain:
         else:
             raise ValueError('Invalid')
 
-    # proof of work
-    def proof(self):
+    # proof of work testing (sends transactions to each node in network) c
+    def proof(self, book_key):
         network = self.nodes
         for node in network:
-            response = requests.post(f'http://{node}/add_transaction', data={
-                "sender_key": self.transaction[0]['sender_key'],
-                "receiver_key": self.transaction[0]['receiver_key'],
-                "book_key": self.transaction[0]['book_key']
-            })
-            response = requests.get(f'http://{node}/add_block')
+            if node != book_key:
+                requests.post(f'http://{node}/add_transaction', data={
+                    "sender_key": self.transaction[0]['sender_key'],
+                    "receiver_key": self.transaction[0]['receiver_key'],
+                    "book_key": self.transaction[0]['book_key']
+                })
+                response = requests.get(f'http://{node}/add_block')
 
-    # consensus
+    # consensus testing (adding longest chain)
     def consensus(self):
-        self.proof()
+        self.proof(self.transaction[0]['book_key'])
         network = self.nodes
         check_chain = None
         length_chain = len(self.chain)
@@ -72,6 +101,9 @@ class Blockchain:
 
     # creating new transactions
     def new_transaction(self, sender_key, receiver_key, book_key):
+        # testing
+        #key = b'self.private_key'
+        #cipher = Salsa20.new(key)
         self.transaction.append({
             'sender_key': sender_key,
             'receiver_key': receiver_key,
@@ -108,6 +140,9 @@ app = Flask(__name__)
 node_identifier = str(uuid4()).replace('-', '')
 blockchain = Blockchain()
 
+# remove later
+# blockchain.set_key()
+
 
 # create block
 @app.route('/add_block', methods=['GET'])
@@ -131,8 +166,14 @@ def add_transaction():
     required = ['sender_key', 'receiver_key', 'book_key']
     if not all(keys in values for keys in required):
         return 'Missing keys', 400
-    index = blockchain.new_transaction(values['sender_key'], values['receiver_key'], values['book_key'])
-    response = {'message': f' New transaction for block {index}'}
+    # testing
+    #apple = nodes
+    #key = b'apple'
+    # encryptor = Salsa20.new(key)
+    index = blockchain.new_transaction((values['sender_key']),
+                                       (values['receiver_key']),
+                                       (values['book_key']))
+    response = {'message': f' New transaction for block {index} and transaction {len(blockchain.transaction)} '}
     return jsonify(response), 201
 
 
